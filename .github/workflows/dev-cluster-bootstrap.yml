@@ -1,0 +1,139 @@
+name: Terraform dev cluster bootstrap
+
+on:
+  push:
+    branches: [develop]
+    paths:
+      - "terraform/cluster-bootstrap/**"
+      - ".github/workflows/dev-cluster-bootstrap.yml"
+  pull_request:
+    branches: [develop]
+    paths:
+      - "terraform/cluster-bootstrap/**"
+      - ".github/workflows/dev-cluster-bootstrap.yml"
+
+permissions:
+  contents: read
+  id-token: write
+
+env:
+  TERRAFORM_VERSION: ${{ vars.TERRAFORM_VERSION || '1.17.1' }}
+
+jobs:
+  format:
+    name: Check Terraform formatting
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: terraform/cluster-bootstrap
+    steps:
+      - name: Check out code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4
+        with:
+          terraform_version: ${{ env.TERRAFORM_VERSION }}
+          terraform_wrapper: false
+
+      - name: Check formatting
+        run: terraform fmt -check -diff -recursive
+
+  plan:
+    name: Plan cluster bootstrap in HCP Terraform
+    if: ${{ github.event_name == 'pull_request' }}
+    needs: format
+    runs-on: ubuntu-latest
+    environment: ${{ github.base_ref || github.ref_name }}
+    defaults:
+      run:
+        working-directory: terraform/cluster-bootstrap
+    env:
+      TF_IN_AUTOMATION: "true"
+    steps:
+      - name: Check out code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4
+        with:
+          terraform_version: ${{ env.TERRAFORM_VERSION }}
+          terraform_wrapper: false
+
+      - name: Initialize remote backend
+        env:
+          TF_TOKEN_app_terraform_io: ${{ secrets.TF_API_TOKEN }}
+        run: |
+          if [ -z "$TF_TOKEN_app_terraform_io" ]; then
+            echo 'Set the TF_API_TOKEN repository secret with HCP Terraform access.' >&2
+            exit 1
+          fi
+          branch="${GITHUB_BASE_REF:-$GITHUB_REF_NAME}"
+          backend_file="environments/${branch}.tfbackend"
+          if [ ! -f "$backend_file" ]; then
+            echo "Backend configuration not found: $backend_file" >&2
+            exit 1
+          fi
+          terraform init -input=false -backend-config="$backend_file"
+
+      - name: Validate configuration
+        run: terraform validate -no-color
+
+      - name: Run speculative plan
+        env:
+          TF_TOKEN_app_terraform_io: ${{ secrets.TF_API_TOKEN }}
+        run: terraform plan -input=false -no-color
+
+  apply:
+    name: Apply cluster bootstrap in HCP Terraform
+    if: ${{ github.event_name == 'push' }}
+    needs: format
+    runs-on: ubuntu-latest
+    environment: ${{ github.base_ref || github.ref_name }}
+    concurrency:
+      group: terraform-bootstrap-apply-${{ github.ref_name }}
+      cancel-in-progress: false
+    defaults:
+      run:
+        working-directory: terraform/cluster-bootstrap
+    env:
+      TF_IN_AUTOMATION: "true"
+    steps:
+      - name: Check out pushed code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4
+        with:
+          terraform_version: ${{ env.TERRAFORM_VERSION }}
+          terraform_wrapper: false
+
+      - name: Initialize remote backend
+        env:
+          TF_TOKEN_app_terraform_io: ${{ secrets.TF_API_TOKEN }}
+        run: |
+          if [ -z "$TF_TOKEN_app_terraform_io" ]; then
+            echo 'Set the TF_API_TOKEN repository secret with HCP Terraform access.' >&2
+            exit 1
+          fi
+          branch="${GITHUB_BASE_REF:-$GITHUB_REF_NAME}"
+          backend_file="environments/${branch}.tfbackend"
+          if [ ! -f "$backend_file" ]; then
+            echo "Backend configuration not found: $backend_file" >&2
+            exit 1
+          fi
+          terraform init -input=false -backend-config="$backend_file"
+
+      - name: Validate configuration
+        run: terraform validate -no-color
+
+      - name: Apply pushed configuration
+        env:
+          TF_TOKEN_app_terraform_io: ${{ secrets.TF_API_TOKEN }}
+        run: terraform apply -auto-approve -input=false -no-color

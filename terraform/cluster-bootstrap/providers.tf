@@ -1,7 +1,7 @@
 terraform {
   required_version = ">= 1.5.7"
 
-  cloud {}
+  backend "remote" {}
 
   required_providers {
     aws = {
