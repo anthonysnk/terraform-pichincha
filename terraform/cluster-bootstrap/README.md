@@ -16,6 +16,41 @@ The identity running this workspace needs read access to the infrastructure
 workspace state. Do not copy the infrastructure state or its credentials into
 this root.
 
+## CI/CD
+
+`.github/workflows/dev-cluster-bootstrap.yml` checks formatting and runs a
+speculative plan for pull requests targeting `develop`. Pushes to `develop`
+run apply after formatting succeeds. Both events filter changes to
+`terraform/cluster-bootstrap/**` and the bootstrap workflow file. Direct pushes
+also apply; require pull requests through branch protection if needed.
+
+Configure these GitHub variables and secret for the `develop` environment:
+
+| Setting             | Kind              | Purpose                                                 |
+| ------------------- | ----------------- | ------------------------------------------------------- |
+| `TF_API_TOKEN`      | Secret            | Token with plan/apply access to the bootstrap workspace |
+| `TERRAFORM_VERSION` | Optional variable | Same Terraform version as the HCP workspace             |
+
+The workflow follows the infrastructure template and initializes this root's
+`remote` backend using `environments/<branch>.tfbackend`. The base branch is
+used for pull requests and the ref name for pushes. `develop.tfbackend` selects
+`personal-snk/tf-cluster-bootstrap-pichincha-dev`, separately from the
+infrastructure state. It does not pass `develop.tfvars`; configure `aws_region`
+and other inputs in the bootstrap HCP workspace. Changing the backend
+declaration does not migrate state; review any existing state before deliberately
+reinitializing a previously initialized local directory.
+
+Use CLI-driven remote execution in the bootstrap workspace. Its execution
+environment, not the GitHub runner, needs the AWS CLI on `PATH`, AWS credentials,
+permission to describe EKS, an EKS access entry for its identity, and network
+access to the Kubernetes API used by Helm and kubectl. Use a VPC-connected HCP
+agent if that API is only privately reachable. Allow the bootstrap workspace
+to read the infrastructure workspace state.
+
+Apply infrastructure before bootstrap. These workflows do not automatically
+order their runs when a change touches both roots. No workflow execution,
+workspace configuration or cluster access has been verified against HCP/AWS.
+
 ## Inputs
 
 - `aws_region`: AWS region containing the EKS cluster.
@@ -47,14 +82,14 @@ The current baseline is:
 Optional capabilities are controlled by boolean Terraform variables, all with
 `default = false`:
 
-| Capability | Flag | Current state |
-| --- | --- | --- |
-| AWS ACM certificate | AWS/Route 53 configuration | Use ACM for the ALB TLS certificate |
-| Amazon EBS CSI driver | `enable_ebs_csi` | Disabled; enable only if the application needs persistent EBS volumes |
-| Karpenter controller | `enable_karpenter_controller` | Disabled |
-| Karpenter provisioning | `enable_karpenter_provisioning` | Disabled |
-| Cluster Autoscaler | `enable_cluster_autoscaler` | Disabled |
-| Argo CD public Gateway | `enable_argocd_gateway` | Disabled; use port-forward until required |
+| Capability             | Flag                            | Current state                                                         |
+| ---------------------- | ------------------------------- | --------------------------------------------------------------------- |
+| AWS ACM certificate    | AWS/Route 53 configuration      | Use ACM for the ALB TLS certificate                                   |
+| Amazon EBS CSI driver  | `enable_ebs_csi`                | Disabled; enable only if the application needs persistent EBS volumes |
+| Karpenter controller   | `enable_karpenter_controller`   | Disabled                                                              |
+| Karpenter provisioning | `enable_karpenter_provisioning` | Disabled                                                              |
+| Cluster Autoscaler     | `enable_cluster_autoscaler`     | Disabled                                                              |
+| Argo CD public Gateway | `enable_argocd_gateway`         | Disabled; use port-forward until required                             |
 
 Karpenter is intentionally split into controller and provisioning flags. The
 controller alone does not create nodes; provisioning also requires an

@@ -8,30 +8,28 @@ resource "helm_release" "aws_load_balancer_controller" {
   wait             = true
   timeout          = 900
 
-  set {
-    name  = "clusterName"
-    value = data.terraform_remote_state.infrastructure.outputs.eks_cluster_name
-  }
-
-  set {
-    name  = "region"
-    value = var.aws_region
-  }
-
-  set {
-    name  = "vpcId"
-    value = data.aws_eks_cluster.target.vpc_config[0].vpc_id
-  }
-
-  set {
-    name  = "serviceAccount.create"
-    value = "false"
-  }
-
-  set {
-    name  = "serviceAccount.name"
-    value = "aws-load-balancer-controller"
-  }
+  set = [
+    {
+      name  = "clusterName"
+      value = data.terraform_remote_state.infrastructure.outputs.eks_cluster_name
+    },
+    {
+      name  = "region"
+      value = var.aws_region
+    },
+    {
+      name  = "vpcId"
+      value = data.aws_eks_cluster.target.vpc_config[0].vpc_id
+    },
+    {
+      name  = "serviceAccount.create"
+      value = "false"
+    },
+    {
+      name  = "serviceAccount.name"
+      value = "aws-load-balancer-controller"
+    }
+  ]
 
   depends_on = [
     aws_eks_pod_identity_association.aws_load_balancer_controller,
