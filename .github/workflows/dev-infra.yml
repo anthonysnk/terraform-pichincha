@@ -1,9 +1,12 @@
-name: Terraform dev
+name: Terraform dev infrastructure
 
 on:
   pull_request:
     branches: [develop]
     types: [opened, synchronize, reopened, closed]
+    paths:
+      - 'terraform/infrastructure/**'
+      - '.github/workflows/dev-infra.yml'
 
 permissions:
   contents: read

@@ -1,8 +1,8 @@
 ## THEREAL ENVIRONMENT CONFIGURATION IS IN TERRAFORMM CLOUD
 ## THIS FILE CONTAINS AN EXAMPLE CONFIGURATION FOR THE DEV ENVIRONMENT
 ## Account Setup
-aws_region                   = "us-east-1"
-environment                  = "dev"
+aws_region  = "us-east-1"
+environment = "dev"
 
 ## Network
 vpc_cidr           = "172.20.0.0/16"
