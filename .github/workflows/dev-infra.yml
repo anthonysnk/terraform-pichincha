@@ -61,10 +61,10 @@ jobs:
 
       - name: Initialize remote backend
         env:
-          TF_TOKEN_app_terraform_io: ${{ secrets.TF_PLAN_TOKEN }}
+          TF_TOKEN_app_terraform_io: ${{ secrets.TF_API_TOKEN }}
         run: |
           if [ -z "$TF_TOKEN_app_terraform_io" ]; then
-            echo 'Set the TF_PLAN_TOKEN repository secret with plan-only permissions.' >&2
+            echo 'Set the TF_API_TOKEN repository secret with HCP Terraform access.' >&2
             exit 1
           fi
           backend_file="environments/${GITHUB_BASE_REF}.tfbackend"
@@ -79,7 +79,7 @@ jobs:
 
       - name: Run speculative plan
         env:
-          TF_TOKEN_app_terraform_io: ${{ secrets.TF_PLAN_TOKEN }}
+          TF_TOKEN_app_terraform_io: ${{ secrets.TF_API_TOKEN }}
         run: terraform plan -input=false -no-color
 
   apply:
@@ -110,10 +110,10 @@ jobs:
 
       - name: Initialize remote backend
         env:
-          TF_TOKEN_app_terraform_io: ${{ secrets.TF_APPLY_TOKEN }}
+          TF_TOKEN_app_terraform_io: ${{ secrets.TF_API_TOKEN }}
         run: |
           if [ -z "$TF_TOKEN_app_terraform_io" ]; then
-            echo 'Set the TF_APPLY_TOKEN secret in the target GitHub environment.' >&2
+            echo 'Set the TF_API_TOKEN repository secret with HCP Terraform access.' >&2
             exit 1
           fi
           backend_file="environments/${GITHUB_BASE_REF}.tfbackend"
@@ -128,5 +128,5 @@ jobs:
 
       - name: Apply merged configuration
         env:
-          TF_TOKEN_app_terraform_io: ${{ secrets.TF_APPLY_TOKEN }}
+          TF_TOKEN_app_terraform_io: ${{ secrets.TF_API_TOKEN }}
         run: terraform apply -auto-approve -input=false -no-color
