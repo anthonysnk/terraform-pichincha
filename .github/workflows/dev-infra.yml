@@ -3,6 +3,9 @@ name: Terraform dev infrastructure
 on:
   push:
     branches: [develop]
+    paths:
+      - "terraform/infrastructure/**"
+      - ".github/workflows/dev-infra.yml"
   pull_request:
     branches: [develop]
     paths:
@@ -19,7 +22,6 @@ env:
 jobs:
   format:
     name: Check Terraform formatting
-    if: ${{ github.event.action != 'closed' || github.event.pull_request.merged == true }}
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -41,7 +43,7 @@ jobs:
 
   plan:
     name: Plan infrastructure in HCP Terraform
-    if: ${{ github.event.action != 'closed' }}
+    if: ${{ github.event_name == 'pull_request' }}
     needs: format
     runs-on: ubuntu-latest
     environment: ${{ github.base_ref || github.ref_name }}
@@ -70,7 +72,8 @@ jobs:
             echo 'Set the TF_API_TOKEN repository secret with HCP Terraform access.' >&2
             exit 1
           fi
-          backend_file="environments/${GITHUB_BASE_REF}.tfbackend"
+          branch="${GITHUB_BASE_REF:-$GITHUB_REF_NAME}"
+          backend_file="environments/${branch}.tfbackend"
           if [ ! -f "$backend_file" ]; then
             echo "Backend configuration not found: $backend_file" >&2
             exit 1
@@ -86,8 +89,8 @@ jobs:
         run: terraform plan -input=false -no-color
 
   apply:
-    name: Apply merged infrastructure in HCP Terraform
-    if: ${{ github.event.action == 'closed' && github.event.pull_request.merged == true }}
+    name: Apply infrastructure in HCP Terraform
+    if: ${{ github.event_name == 'push' }}
     needs: format
     runs-on: ubuntu-latest
     environment: ${{ github.base_ref || github.ref_name }}
@@ -100,7 +103,7 @@ jobs:
     env:
       TF_IN_AUTOMATION: "true"
     steps:
-      - name: Check out merged code
+      - name: Check out pushed code
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           persist-credentials: false
@@ -119,7 +122,8 @@ jobs:
             echo 'Set the TF_API_TOKEN repository secret with HCP Terraform access.' >&2
             exit 1
           fi
-          backend_file="environments/${GITHUB_BASE_REF}.tfbackend"
+          branch="${GITHUB_BASE_REF:-$GITHUB_REF_NAME}"
+          backend_file="environments/${branch}.tfbackend"
           if [ ! -f "$backend_file" ]; then
             echo "Backend configuration not found: $backend_file" >&2
             exit 1
@@ -129,7 +133,7 @@ jobs:
       - name: Validate configuration
         run: terraform validate -no-color
 
-      - name: Apply merged configuration
+      - name: Apply pushed configuration
         env:
           TF_TOKEN_app_terraform_io: ${{ secrets.TF_API_TOKEN }}
         run: terraform apply -auto-approve -input=false -no-color
