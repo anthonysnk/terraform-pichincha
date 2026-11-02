@@ -1,0 +1,6 @@
+hostname     = "app.terraform.io"
+organization = "personal-snk"
+
+workspaces {
+  name = "tf-infrastructure-pichincha-dev"
+}

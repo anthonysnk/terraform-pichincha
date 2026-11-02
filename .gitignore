@@ -4,3 +4,7 @@
 *.tfplan
 crash.log
 __pycache__/
+*.terraform.lock.hcl*
+*.DS_Store
+PRUEABA.md
+*odd*
