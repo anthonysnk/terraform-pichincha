@@ -5,8 +5,8 @@ on:
     branches: [develop]
     types: [opened, synchronize, reopened, closed]
     paths:
-      - 'terraform/infrastructure/**'
-      - '.github/workflows/dev-infra.yml'
+      - "terraform/infrastructure/**"
+      - ".github/workflows/dev-infra.yml"
 
 permissions:
   contents: read
@@ -42,6 +42,7 @@ jobs:
     if: ${{ github.event.action != 'closed' }}
     needs: format
     runs-on: ubuntu-latest
+    environment: ${{ github.ref_name }}
     defaults:
       run:
         working-directory: terraform/infrastructure
