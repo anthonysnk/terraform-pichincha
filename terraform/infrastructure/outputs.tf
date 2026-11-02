@@ -19,6 +19,6 @@ output "eks_cluster_name" {
 }
 
 output "eks_cluster_endpoint" {
-  description = "Private EKS API endpoint."
+  description = "Public EKS API endpoint."
   value       = try(module.eks.cluster_endpoint, "NONE")
 }
