@@ -1,15 +1,17 @@
 name: Terraform dev infrastructure
 
 on:
+  push:
+    branches: [develop]
   pull_request:
     branches: [develop]
-    types: [opened, synchronize, reopened, closed]
     paths:
       - "terraform/infrastructure/**"
       - ".github/workflows/dev-infra.yml"
 
 permissions:
   contents: read
+  id-token: write
 
 env:
   TERRAFORM_VERSION: ${{ vars.TERRAFORM_VERSION || '1.17.1' }}
@@ -90,7 +92,7 @@ jobs:
     runs-on: ubuntu-latest
     environment: ${{ github.ref_name }}
     concurrency:
-      group: terraform-apply-${{ github.base_ref }}
+      group: terraform-apply-${{ github.ref_name }}
       cancel-in-progress: false
     defaults:
       run:
