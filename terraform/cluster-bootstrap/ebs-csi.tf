@@ -34,7 +34,7 @@ resource "aws_eks_addon" "ebs_csi" {
   addon_name                  = "aws-ebs-csi-driver"
   resolve_conflicts_on_create = "OVERWRITE"
 
-  depends_on = [aws_iam_role_policy_attachment.ebs_csi]
+  depends_on = [aws_eks_pod_identity_association.ebs_csi]
 }
 
 resource "aws_eks_pod_identity_association" "ebs_csi" {
@@ -45,5 +45,31 @@ resource "aws_eks_pod_identity_association" "ebs_csi" {
   service_account = "ebs-csi-controller-sa"
   role_arn        = aws_iam_role.ebs_csi[0].arn
 
-  depends_on = [aws_eks_addon.ebs_csi]
+  depends_on = [aws_iam_role_policy_attachment.ebs_csi]
+}
+
+resource "kubectl_manifest" "gp3_storage_class" {
+  count = var.enable_ebs_csi ? 1 : 0
+
+  yaml_body = yamlencode({
+    apiVersion = "storage.k8s.io/v1"
+    kind       = "StorageClass"
+    metadata = {
+      name = "gp3"
+    }
+    provisioner          = "ebs.csi.aws.com"
+    volumeBindingMode    = "WaitForFirstConsumer"
+    allowVolumeExpansion = true
+    reclaimPolicy        = "Delete"
+    parameters = {
+      type      = "gp3"
+      fsType    = "ext4"
+      encrypted = "true"
+    }
+  })
+
+  depends_on = [
+    aws_eks_addon.ebs_csi,
+    aws_eks_pod_identity_association.ebs_csi,
+  ]
 }

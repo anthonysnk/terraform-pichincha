@@ -1,4 +1,4 @@
-import { app, server } from '.'
+import { app, databaseInitialization, server } from '.'
 import request from 'supertest'
 import User from './users/model.js'
 import sequelize from './shared/database/database'
@@ -65,5 +65,13 @@ describe('User', () => {
 
         expect(response.status).toBe(200)
         expect(response.body).toEqual({ status: 'ok' })
+    })
+
+    test('Readiness check', async () => {
+        await databaseInitialization
+        const response = await request(app).get('/ready')
+
+        expect(response.status).toBe(200)
+        expect(response.body).toEqual({ status: 'ready' })
     })
 })
