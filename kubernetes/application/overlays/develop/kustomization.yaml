@@ -10,4 +10,4 @@ resources:
 images:
   - name: app
     newName: 050264659180.dkr.ecr.us-east-1.amazonaws.com/dev-pichincha-dev-app
-    newTag: 4acea6e99d25cdef5923efaac4ff82da4c01e432
+    newTag: 168890c09e86cf7e649376cdc1e008038b05ec62
