@@ -385,6 +385,11 @@ production alternative. None of them is an unfinished task.
   with one 8 GiB `gp3` volume has no replication, no failover, no automated backup
   and no point-in-time recovery. It exists because the starter persisted to a local
   file, which two replicas cannot share. RDS or Aurora is the production answer.
+- **The cluster runs in a single availability zone.** The worker node group is
+  pinned to `us-east-1b` because an EBS volume cannot be attached outside its
+  zone. With one node and three subnets, a Spot replacement could land in another
+  zone and leave the database volume permanently unreachable. Spreading workers
+  across zones would require a managed database or a per-zone node group.
 - **Workers are public and interruptible.** Public subnets, NAT disabled, a public
   EKS API endpoint and Spot instances are cost decisions. Spot capacity can be
   reclaimed and the nodes have public IPs. Private workers with a NAT gateway or
