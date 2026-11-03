@@ -53,6 +53,8 @@ spec:
               value: app
             - name: POSTGRES_USER
               value: app
+            - name: PGDATA
+              value: /var/lib/postgresql/data/pgdata
             - name: POSTGRES_PASSWORD
               valueFrom:
                 secretKeyRef:
