@@ -261,6 +261,26 @@ trade-offs are visible without reading the whole repository.
   The StatefulSet demonstrates persistent storage, a headless Service, a
   `WaitForFirstConsumer` StorageClass and the EBS CSI driver at a fraction of the
   price.
+- **Readiness checks the database on every probe; liveness never does.**
+  `livenessProbe` and `startupProbe` target `/health`, which returns 200
+  unconditionally, so a database outage degrades the pod to `NotReady` instead of
+  restarting it. `readinessProbe` targets `/ready`, which runs
+  `sequelize.authenticate()` — a pooled `SELECT 1+1`, not a new connection — so the
+  pod leaves the Service endpoints within seconds of the database failing and
+  rejoins on its own when it returns. Checking a boolean set once at startup was
+  rejected: when the pods started before PostgreSQL, that flag stayed `false`
+  forever and every affected pod needed a manual restart to recover.
+- **Schema creation runs once, guarded by a shared promise and not a boolean.**
+  `sequelize.sync()` emits DDL, so overlapping readiness probes must not each run
+  it. A boolean read before the `await` lets every concurrent probe through: five
+  overlapping probes plus the startup call produced six `sync()` executions and
+  four duplicate `db is ready` lines. A memoized promise produces one, and resets
+  itself only on failure so a transient error is retried.
+- **The readiness check is bounded even when the connection stalls.** The kubelet
+  allows one second per probe, but the server-side check would otherwise wait
+  indefinitely on a socket that completes the TCP handshake and never answers.
+  `/ready` races the check against 1.5 s, so a stalled database is answered with
+  503 in about 1.5 s instead of hanging and holding a pool slot.
 - **Secrets never enter Git.** Terraform generates the database password with
   `random_password` and stores it as an SSM `SecureString`; the External Secrets
   Operator projects it into the namespace through a `SecretStore` and an
@@ -400,6 +420,11 @@ production alternative. None of them is an unfinished task.
   repository is public, so the automation pull request requires a reviewer before
   Argo CD can deploy it. That merge is the approval gate, not a missing
   automation step.
+- **The database connect timeout cannot be bounded from application config.**
+  Sequelize 6.31 does not forward `connectionTimeoutMillis` to `pg`, and
+  `pool.acquire` bounds queueing rather than connection setup. A stalled handshake
+  is therefore bounded at the HTTP layer only: `/ready` answers 503 in 1.5 s, but
+  the underlying attempt is left to the kernel's own timeout.
 - **Testing stops at the application and the manifest level.** The suite covers the
   HTTP handlers, the health and readiness endpoints and the request validation; it
   does not run end-to-end against a live cluster, and there is no load test.
