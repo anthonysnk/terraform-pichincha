@@ -40,7 +40,7 @@ spec:
                   key: DATABASE_PASSWORD
           startupProbe:
             httpGet:
-              path: /ready
+              path: /health
               port: http
             failureThreshold: 30
             periodSeconds: 5
