@@ -7,7 +7,7 @@ cluster_name_prefix         = "pichincha-dev"
 enable_ebs_csi                = true
 enable_karpenter_controller   = false
 enable_karpenter_provisioning = false
-enable_cluster_autoscaler     = false
+enable_cluster_autoscaler     = true
 enable_argocd_gateway         = false
 argocd_hostname               = ""
 

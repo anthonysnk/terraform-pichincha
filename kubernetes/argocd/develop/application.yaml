@@ -1,0 +1,26 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: devsu-nodejs-develop
+  namespace: argocd
+  labels:
+    app.kubernetes.io/name: devsu-nodejs
+    app.kubernetes.io/part-of: devsu-nodejs
+    environment: develop
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/anthonysnk/terraform-pichincha.git
+    targetRevision: develop
+    path: kubernetes/application/overlays/develop
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: devsu-app
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

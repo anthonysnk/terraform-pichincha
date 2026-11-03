@@ -1,0 +1,143 @@
+name: Node.js application
+
+on:
+  push:
+    branches: [develop]
+    paths:
+      - "devsu-demo-devops-nodejs/**"
+      - "kubernetes/application/**"
+      - ".github/workflows/dev-app.yml"
+  pull_request:
+    branches: [develop]
+    paths:
+      - "devsu-demo-devops-nodejs/**"
+      - "kubernetes/application/**"
+      - ".github/workflows/dev-app.yml"
+
+permissions:
+  contents: read
+
+env:
+  APP_DIRECTORY: devsu-demo-devops-nodejs
+  DOCKERFILE_PATH: Dockerfile
+  AWS_REGION: ${{ vars.AWS_REGION || 'us-east-1' }}
+  ECR_REPOSITORY: ${{ vars.ECR_REPOSITORY || 'dev-pichincha-dev-app' }}
+  AWS_ROLE_ARN: ${{ vars.AWS_ROLE_ARN }}
+
+jobs:
+  quality:
+    name: Build, test, analyze and cover
+    if: ${{ github.event_name == 'pull_request' || !contains(github.event.head_commit.message, '[skip ci]') }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    defaults:
+      run:
+        working-directory: devsu-demo-devops-nodejs
+    steps:
+      - name: Check out code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18.15.0
+          cache: npm
+          cache-dependency-path: devsu-demo-devops-nodejs/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Static code analysis
+        run: npm run lint
+
+      - name: Run unit tests
+        run: npm test -- --runInBand
+
+      - name: Generate code coverage
+        run: npm run test:coverage
+
+  image:
+    name: Build and publish image
+    if: ${{ github.event_name == 'push' && !contains(github.event.head_commit.message, '[skip ci]') }}
+    needs: quality
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    outputs:
+      image: ${{ steps.build-image.outputs.image }}
+      image-name: ${{ steps.build-image.outputs.image-name }}
+      image-tag: ${{ steps.get-commit-hash.outputs.commit-hash }}
+    steps:
+      - name: Check out code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: ${{ env.AWS_REGION }}
+          role-to-assume: ${{ env.AWS_ROLE_ARN }}
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2.1.7
+
+      - name: Get Commit SHA
+        id: get-commit-hash
+        run: echo "commit-hash=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
+      - name: Build, Tag, and Push Docker Image
+        id: build-image
+        working-directory: devsu-demo-devops-nodejs
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          IMAGE_TAG: ${{ steps.get-commit-hash.outputs.commit-hash }}
+        run: |
+          image="$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
+          docker build --no-cache -t "$image" -f "$DOCKERFILE_PATH" .
+          docker tag "$image" "$ECR_REGISTRY/$ECR_REPOSITORY:latest"
+          docker push "$image"
+          docker push "$ECR_REGISTRY/$ECR_REPOSITORY:latest"
+          echo "image=$image" >> "$GITHUB_OUTPUT"
+          echo "image-name=$ECR_REGISTRY/$ECR_REPOSITORY" >> "$GITHUB_OUTPUT"
+
+  gitops:
+    name: Update GitOps image tag
+    if: ${{ github.event_name == 'push' && !contains(github.event.head_commit.message, '[skip ci]') && hashFiles('kubernetes/application/overlays/develop/kustomization.yaml') != '' }}
+    needs: image
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Check out code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: true
+
+      - name: Update image tag in GitOps manifest
+        env:
+          IMAGE_NAME: ${{ needs.image.outputs.image-name }}
+          IMAGE_TAG: ${{ needs.image.outputs.image-tag }}
+        run: |
+          manifest="kubernetes/application/overlays/develop/kustomization.yaml"
+          sed -i.bak -E "s|^([[:space:]]*newName:[[:space:]]*).*|\1${IMAGE_NAME}|" "$manifest"
+          sed -i.bak -E "s/^([[:space:]]*newTag:[[:space:]]*).*/\1${IMAGE_TAG}/" "$manifest"
+          rm -f "${manifest}.bak"
+
+      - name: Commit GitOps change
+        run: |
+          manifest="kubernetes/application/overlays/develop/kustomization.yaml"
+          if git diff --quiet -- "$manifest"; then
+            echo 'GitOps image tag is already current.'
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add "$manifest"
+          git commit -m "chore(deploy): update application image [skip ci]"
+          git push

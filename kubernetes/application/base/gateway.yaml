@@ -1,0 +1,33 @@
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: devsu-nodejs
+  namespace: devsu-app
+  annotations:
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    alb.ingress.kubernetes.io/target-type: ip
+spec:
+  gatewayClassName: alb
+  listeners:
+    - name: http
+      protocol: HTTP
+      port: 80
+      allowedRoutes:
+        namespaces:
+          from: Same
+
+    # Future HTTPS listener after the ACM certificate and application hostname exist.
+    # The AWS Load Balancer Controller can discover the ACM certificate from the
+    # hostname or use the certificate ARN annotation below.
+    # - name: https
+    #   protocol: HTTPS
+    #   port: 443
+    #   hostname: app.example.com
+    #   allowedRoutes:
+    #     namespaces:
+    #       from: Same
+
+# Future ACM certificate association:
+# metadata:
+#   annotations:
+#     alb.ingress.kubernetes.io/certificate-arn: arn:aws:acm:<region>:<account>:certificate/<id>

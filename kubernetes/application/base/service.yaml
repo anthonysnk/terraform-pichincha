@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: devsu-nodejs
+  namespace: devsu-app
+  labels:
+    app.kubernetes.io/name: devsu-nodejs
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: devsu-nodejs
+  ports:
+    - name: http
+      port: 8000
+      targetPort: http
+      protocol: TCP
