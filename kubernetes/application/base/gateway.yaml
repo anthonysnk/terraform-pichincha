@@ -3,11 +3,13 @@ kind: Gateway
 metadata:
   name: devsu-nodejs
   namespace: devsu-app
-  annotations:
-    alb.ingress.kubernetes.io/scheme: internet-facing
-    alb.ingress.kubernetes.io/target-type: ip
 spec:
   gatewayClassName: alb
+  infrastructure:
+    parametersRef:
+      group: gateway.k8s.aws
+      kind: LoadBalancerConfiguration
+      name: devsu-nodejs-public
   listeners:
     - name: http
       protocol: HTTP
@@ -27,7 +29,32 @@ spec:
     #     namespaces:
     #       from: Same
 
+
 # Future ACM certificate association:
 # metadata:
 #   annotations:
 #     alb.ingress.kubernetes.io/certificate-arn: arn:aws:acm:<region>:<account>:certificate/<id>
+
+---
+apiVersion: gateway.k8s.aws/v1
+kind: TargetGroupConfiguration
+metadata:
+  name: devsu-nodejs-ip-targets
+  namespace: devsu-app
+spec:
+  targetReference:
+    kind: Service
+    name: devsu-nodejs
+  defaultConfiguration:
+    targetType: ip
+    healthCheckConfig:
+      healthCheckPath: /health
+
+---
+apiVersion: gateway.k8s.aws/v1
+kind: LoadBalancerConfiguration
+metadata:
+  name: devsu-nodejs-public
+  namespace: devsu-app
+spec:
+  scheme: internet-facing

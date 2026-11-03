@@ -1,0 +1,18 @@
+repos:
+  - repo: https://github.com/gruntwork-io/pre-commit
+    rev: v0.1.29 # Get the latest from: https://github.com/gruntwork-io/pre-commit/releases
+    hooks:
+      - id: tflint
+        entry: bash -c 'tflint --chdir=terraform/infrastructure --config="$PWD/.tflint.hcl" --call-module-type=all && tflint --chdir=terraform/cluster-bootstrap --config="$PWD/.tflint.hcl" --call-module-type=all'
+        language: system
+        pass_filenames: false
+      - id: terraform-validate
+        entry: bash -c 'terraform -chdir=terraform/infrastructure validate -no-color && terraform -chdir=terraform/cluster-bootstrap validate -no-color'
+        pass_filenames: false
+      - id: terraform-fmt
+  - repo: https://github.com/antonbabenko/pre-commit-terraform
+    rev: v1.99.3 # Get the latest from: https://github.com/antonbabenko/pre-commit-terraform/releases
+    hooks:
+      - id: terraform_tfsec
+      - id: terraform_docs
+      - id: terraform_checkov
