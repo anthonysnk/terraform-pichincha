@@ -6,24 +6,30 @@ const app = express()
 const PORT = process.env.PORT || 8000
 let databaseReady = false
 
-const databaseInitialization = sequelize.authenticate()
-  .then(() => sequelize.sync())
-  .then(() => {
-    databaseReady = true
-    console.log('db is ready')
-  })
-  .catch((error) => {
-    console.error('database initialization failed', error)
-  })
+const initializeDatabase = async () => {
+    await sequelize.authenticate()
+
+    if (!databaseReady) {
+        await sequelize.sync()
+        databaseReady = true
+        console.log('db is ready')
+    }
+}
+
+const databaseInitialization = initializeDatabase()
+    .catch((error) => {
+        console.error('database initialization failed', error)
+    })
 
 app.use(express.json())
 app.get('/health', (_request, response) => response.status(200).json({ status: 'ok' }))
-app.get('/ready', (_request, response) => {
-    if (!databaseReady) {
+app.get('/ready', async (_request, response) => {
+    try {
+        await initializeDatabase()
+        return response.status(200).json({ status: 'ready' })
+    } catch {
         return response.status(503).json({ status: 'not ready' })
     }
-
-    return response.status(200).json({ status: 'ready' })
 })
 app.use('/api/users', usersRouter)
 
