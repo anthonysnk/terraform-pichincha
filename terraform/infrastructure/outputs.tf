@@ -27,3 +27,13 @@ output "ecr_repository_url" {
   description = "ECR repository URL for the application image."
   value       = module.ecr.data.repository_url
 }
+
+output "application_database_password_parameter_name" {
+  description = "SSM Parameter Store name consumed by External Secrets."
+  value       = aws_ssm_parameter.application_database_password.name
+}
+
+output "application_database_password_parameter_arn" {
+  description = "SSM Parameter Store ARN used by the External Secrets IAM policy."
+  value       = aws_ssm_parameter.application_database_password.arn
+}

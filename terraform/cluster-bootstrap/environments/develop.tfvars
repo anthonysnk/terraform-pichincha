@@ -4,7 +4,7 @@ infrastructure_workspace    = "tf-infrastructure-pichincha-dev"
 cluster_name_prefix         = "pichincha-dev"
 
 # Optional capabilities remain disabled until their prerequisites are reviewed.
-enable_ebs_csi                = false
+enable_ebs_csi                = true
 enable_karpenter_controller   = false
 enable_karpenter_provisioning = false
 enable_cluster_autoscaler     = false
