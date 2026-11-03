@@ -15,3 +15,19 @@ spec:
       allowedRoutes:
         namespaces:
           from: Same
+
+    # Future HTTPS listener after the ACM certificate and application hostname exist.
+    # The AWS Load Balancer Controller can discover the ACM certificate from the
+    # hostname or use the certificate ARN annotation below.
+    # - name: https
+    #   protocol: HTTPS
+    #   port: 443
+    #   hostname: app.example.com
+    #   allowedRoutes:
+    #     namespaces:
+    #       from: Same
+
+# Future ACM certificate association:
+# metadata:
+#   annotations:
+#     alb.ingress.kubernetes.io/certificate-arn: arn:aws:acm:<region>:<account>:certificate/<id>

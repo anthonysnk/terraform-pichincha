@@ -15,3 +15,29 @@ spec:
       backendRefs:
         - name: devsu-nodejs
           port: 8000
+
+# CURRENT STATE:
+# This HTTPRoute listens on the Gateway's HTTP listener and sends traffic
+# directly to the application Service.
+#
+# FUTURE TLS STATE:
+# 1. Enable the Gateway HTTPS listener and configure its ACM certificate.
+# 2. Change this route's parentRefs.sectionName from "http" to "https".
+# 3. Add this separate HTTPRoute named "devsu-nodejs-http-redirect":
+#
+# ---
+# apiVersion: gateway.networking.k8s.io/v1
+# kind: HTTPRoute
+# metadata:
+#   name: devsu-nodejs-http-redirect
+#   namespace: devsu-app
+# spec:
+#   parentRefs:
+#     - name: devsu-nodejs
+#       sectionName: http
+#   rules:
+#     - filters:
+#         - type: RequestRedirect
+#           requestRedirect:
+#             scheme: https
+#             port: 443
