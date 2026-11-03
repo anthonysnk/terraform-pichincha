@@ -36,7 +36,8 @@ webhook so it can create Services. Review failed/pending releases before retryin
 the source fix does not repair an in-progress apply.
 
 Optional components are disabled by default; see [variables.tf](variables.tf).
-DNS is managed manually; ExternalDNS and application resources are not configured.
+The External Secrets Operator is installed for the application’s SSM-backed
+SecretStore. DNS is managed manually; ExternalDNS is not installed.
 
 For EKS login, the Argo CD password and port-forward, use the
 [root commands](../../README.md#cluster-access).
