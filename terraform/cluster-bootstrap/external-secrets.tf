@@ -55,6 +55,8 @@ resource "helm_release" "external_secrets" {
   wait             = true
   timeout          = 600
 
+  depends_on = [aws_eks_pod_identity_association.external_secrets]
+
   set = [
     {
       name  = "installCRDs"
@@ -79,6 +81,5 @@ resource "aws_eks_pod_identity_association" "external_secrets" {
 
   depends_on = [
     aws_iam_role_policy.external_secrets,
-    helm_release.external_secrets,
   ]
 }
