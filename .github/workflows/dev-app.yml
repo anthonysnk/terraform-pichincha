@@ -108,7 +108,7 @@ jobs:
 
   gitops:
     name: Update GitOps image tag
-    if: ${{ github.event_name == 'push' && !contains(github.event.head_commit.message, '[skip ci]') && hashFiles('kubernetes/application/overlays/develop/kustomization.yaml') != '' }}
+    if: ${{ github.event_name == 'push' && !contains(github.event.head_commit.message, '[skip ci]') }}
     needs: image
     runs-on: ubuntu-latest
     permissions:
@@ -120,6 +120,7 @@ jobs:
           persist-credentials: true
 
       - name: Update image tag in GitOps manifest
+        if: ${{ hashFiles('kubernetes/application/overlays/develop/kustomization.yaml') != '' }}
         env:
           IMAGE_NAME: ${{ needs.image.outputs.image-name }}
           IMAGE_TAG: ${{ needs.image.outputs.image-tag }}
@@ -130,6 +131,7 @@ jobs:
           rm -f "${manifest}.bak"
 
       - name: Commit GitOps change
+        if: ${{ hashFiles('kubernetes/application/overlays/develop/kustomization.yaml') != '' }}
         run: |
           manifest="kubernetes/application/overlays/develop/kustomization.yaml"
           if git diff --quiet -- "$manifest"; then
