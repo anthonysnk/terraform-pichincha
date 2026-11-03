@@ -34,6 +34,12 @@ variable "private_subnets" {
   default     = ["172.20.10.0/24", "172.20.11.0/24", "172.20.12.0/24"]
 }
 
+variable "node_group_availability_zone" {
+  description = "Availability zone for the worker node group. EBS volumes are bound to a single zone, so the nodes must stay in the zone that holds the persistent volume."
+  type        = string
+  default     = "us-east-1b"
+}
+
 variable "enable_nat_gateway" {
   description = "Whether to create a NAT gateway for private subnet egress."
   type        = bool

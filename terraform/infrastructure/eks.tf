@@ -40,7 +40,7 @@ module "eks" {
     spot = {
       capacity_type  = "SPOT"
       instance_types = ["t3a.large"]
-      subnet_ids     = module.vpc.public_subnets
+      subnet_ids     = [data.aws_subnet.node_group.id]
 
       min_size     = 1
       desired_size = 1
