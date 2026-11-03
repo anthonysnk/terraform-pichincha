@@ -19,5 +19,8 @@ resource "kubectl_manifest" "argocd_application" {
 
   yaml_body = file("${local.argocd_application_directory}/${each.value}")
 
-  depends_on = [helm_release.argocd]
+  depends_on = [
+    helm_release.argocd,
+    helm_release.metrics_server,
+  ]
 }
