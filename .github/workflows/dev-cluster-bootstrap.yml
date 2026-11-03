@@ -5,11 +5,13 @@ on:
     branches: [develop]
     paths:
       - "terraform/cluster-bootstrap/**"
+      - "kubernetes/argocd/**"
       - ".github/workflows/dev-cluster-bootstrap.yml"
   pull_request:
     branches: [develop]
     paths:
       - "terraform/cluster-bootstrap/**"
+      - "kubernetes/argocd/**"
       - ".github/workflows/dev-cluster-bootstrap.yml"
 
 permissions:

@@ -39,7 +39,7 @@ module "eks" {
   eks_managed_node_groups = {
     spot = {
       capacity_type  = "SPOT"
-      instance_types = ["t3a.medium", "t3.medium"]
+      instance_types = ["t3a.large"]
       subnet_ids     = module.vpc.public_subnets
 
       min_size     = 1
